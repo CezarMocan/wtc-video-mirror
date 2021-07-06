@@ -1,0 +1,9 @@
+ofxGui
+ofxNetwork
+ofxXmlSettings
+../local_addons/ofxTweener
+../local_addons/ofxCavalierContours
+../local_addons/ofxClipper
+../local_addons/ofxAutoShader
+../local_addons/ofxHapPlayer
+../local_addons/ofxKinectForWindows2
