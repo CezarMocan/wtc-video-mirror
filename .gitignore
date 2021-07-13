@@ -7,6 +7,7 @@ MainApp/.vs
 MainApp/*.sln
 MainApp/*.vcxproj
 MainApp/bin/data/video
+MainApp/MainApp.vcxproj.user
 
 # build files
 openFrameworks.a
