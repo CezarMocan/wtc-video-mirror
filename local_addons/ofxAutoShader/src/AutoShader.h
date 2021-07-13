@@ -7,7 +7,7 @@
 //
 
 // Uncomment below in order to enable automatic shader reloading
-// #define AUTO_SHADER_RELOAD
+#define AUTO_SHADER_RELOAD
 
 #pragma once
 #include "ofMain.h"

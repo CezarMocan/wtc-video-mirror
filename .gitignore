@@ -2,6 +2,12 @@
 # openFrameworks patterns
 #########################
 
+MainApp/bin/*.dll
+MainApp/.vs
+MainApp/*.sln
+MainApp/*.vcxproj
+MainApp/bin/data/video
+
 # build files
 openFrameworks.a
 openFrameworksDebug.a
