@@ -2,38 +2,39 @@
 
 //--------------------------------------------------------------
 void ofApp::setup(){
+    // openFrameworks rendering setup
     ofDisableArbTex();
     ofSetVerticalSync(true);
-
     ofBackground(0);
 
+    // Loading videos
     videos.push_back("video/video-1-hap-noaudio.mov");
     videos.push_back("video/video-2-hap-noaudio.mov");
     videos.push_back("video/video-3-hap-noaudio.mov");
     videos.push_back("video/video-4-hap-noaudio.mov");
     videos.push_back("video/video-5-hap-noaudio.mov");
 
-    // Load a movie file
-//    players[0].load("video/video-1-hap-noaudio.mov");
-//    players[0].play();
-    for (int i = 0; i < 5; i++) {
+    for (int i = 0; i < videos.size(); i++) {
         loadVideo(videos[i], players[i]);
         players[i].setLoopState(OF_LOOP_PALINDROME);
     }
 
+    // Contour finder setup
 	contourFinder.setMinAreaRadius(10);
 	contourFinder.setMaxAreaRadius(1000);
-	contourFinder.setThreshold(15);
+	contourFinder.setThreshold(0);
 
+    // Kinect setup
     initKinect();
 
+    // Shaders and FBOs setup
     maskShader.setup("shaders/mask-shader.vert", "shaders/mask-shader.frag");
     videoMaskFbo.allocate(COLOR_WIDTH, COLOR_HEIGHT);
     windowFbo.allocate(COLOR_WIDTH, COLOR_HEIGHT);
-
     mesh.set(COLOR_WIDTH, COLOR_HEIGHT, 0, 0);
     mesh.setPosition(COLOR_WIDTH / 2, COLOR_HEIGHT / 2, 0);
     
+    // GUI parameters setup
     gui.setup();
 
     parameters.add(depthImageScale.set("depth scale", DEPTH_DEFAULT_SCALE, 1, 4));
@@ -81,22 +82,21 @@ void ofApp::loadVideo(string filename, ofxHapPlayer& plr) {
 }
 
 void ofApp::detectBodies() {
-	// Count number of tracked bodies and update skeletons for each tracked body
+	// Count number of tracked bodies and update object for each tracked body
 	auto& bodies = kinect.getBodySource()->getBodies();
 	vector<int> oldTrackedBodyIds = this->trackedBodyIds;
 	this->trackedBodyIds.clear();
 
 	for (auto& body : bodies) {
 		if (body.tracked) {
-			// Update body skeleton data for tracked bodies
 			this->trackedBodyIds.push_back(body.bodyId);
-
 			if (this->trackedBodies.find(body.bodyId) == this->trackedBodies.end()) {
 				this->trackedBodies[body.bodyId] = make_shared<TrackedBody>(body.bodyId, 0.25, 800);
 				this->trackedBodies[body.bodyId]->setIsTracked(true);
 			}
-
-			// TODO (cezar): Turn this into parameter
+            
+            // This number of contour points is the resolution of the polygon that
+            // represents the body. More points means better accuracy, but slower performance.
 			this->trackedBodies[body.bodyId]->setNumberOfContourPoints(200);
 		}
 		else {
@@ -116,8 +116,13 @@ void ofApp::computeBodyContours() {
 	int previewWidth = DEPTH_WIDTH;
 	int previewHeight = DEPTH_HEIGHT;
 
-	// WARNING: This code works under the assumption that there is only one tracked body
-	// (this is our installation setup.)
+	// WARNING: This code needs to be tested for multiple people.
+
+    // The way kinect.getBodyIndexSource() works is that it's an image
+    // in which the pixels of body #1 all have the color (1, 1, 1),
+    // the pixels of body #2 all have the color (2, 2, 2), etc.
+    // So the contourFinder takes the bodyId as a color, and looks
+    // for continuous areas of pixels with that color.
 	for (int i = 0; i < this->trackedBodyIds.size(); i++) {
 		const int bodyId = this->trackedBodyIds[i];
 		contourFinder.setUseTargetColor(true);
@@ -132,28 +137,14 @@ void ofApp::computeBodyContours() {
 
 //--------------------------------------------------------------
 void ofApp::update(){
+    // At every frame, we ask the kinect to update its video feed
+    // and then we update our list of tracked bodies, and 
+    // get their contours as polygons.
 	kinect.update();
 	this->detectBodies();
 	this->computeBodyContours();
 
-    videoMaskFbo.begin();
-    ofClear(0, 0, 0, 0);
-    /*
-        ofSetColor(0, 0, 0, 5);
-        ofFill();
-        ofDrawRectangle(0, 0, COLOR_WIDTH, COLOR_HEIGHT);
-        */
-
-    ofSetColor(255);
-
-    for (int i = 0; i < this->trackedBodyIds.size(); i++) {
-        const int bodyId = this->trackedBodyIds[i];
-        if (trackedBodies[bodyId]->isTracked) {
-            trackedBodies[bodyId]->drawContourForRaster(ofColor(255, 255, 255, 255));
-        }
-    }
-    videoMaskFbo.end();
-
+    // We switch up the video that's being played roughly every 500 frames.
     if (ofRandom(500) < 1) {
         videoIndex = (videoIndex + 1) % 5;
     }
@@ -161,25 +152,44 @@ void ofApp::update(){
 
 //--------------------------------------------------------------
 void ofApp::draw(){
+    // First, we draw the camera feed directly onto the screen.
   	kinect.getColorSource()->draw(0, 0, COLOR_WIDTH, COLOR_HEIGHT);
 
-    //videoMaskFbo.draw(0, 0);
-    //videoMaskFbo.getTexture().draw(0, 0);
+    // Next up, we draw the body contours onto a texture (FBO,)
+    // in order to use them as a mask for the video.
+    // When implementing multiple bodies, you'll have to 
+    // either use one FBO per body (so you can have independent masks,)
+    // or draw all bodies on the same FBO, but with different colors
+    // and let the shader figure out which color masks which video.
+    videoMaskFbo.begin();
+    ofClear(0, 0, 0, 0);
+    ofSetColor(255);
+
+    for (int i = 0; i < this->trackedBodyIds.size(); i++) {
+        const int bodyId = this->trackedBodyIds[i];
+        if (trackedBodies[bodyId]->isTracked) {
+            trackedBodies[bodyId]->draw(ofColor(255, 255, 255, 255));
+        }
+    }
+    videoMaskFbo.end();
 
     if (players[videoIndex].isLoaded()) {
+        // We draw the masked video onto another FBO
         windowFbo.begin();
-
         ofSetColor(0, 0, 0, 5);
         ofFill();
-        //ofDrawRectangle(0, 0, COLOR_WIDTH, COLOR_HEIGHT);
 
+        // The shader takes a mask texture (where we drew the body in white, over a black background)
+        // and the current frame of the current video, and applies the mask.
         maskShader.begin();
         float width = COLOR_WIDTH;
         float height = COLOR_HEIGHT; //width * players[videoIndex].getHeight() / players[videoIndex].getWidth();
 
         maskShader.setUniformTexture("mask", videoMaskFbo.getTexture(), 1);
 
-        if (sin(ofGetElapsedTimef()) < 2) {
+        // Just for demo purposes, draw the current video most of the time,
+        // but also draw the camera feed every now and then.
+        if (sin(ofGetElapsedTimef()) < 0.9) {
             players[videoIndex].draw(0, 0, width, height);
         }
         else {
@@ -187,12 +197,13 @@ void ofApp::draw(){
         }
         
         maskShader.end();
-
         windowFbo.end();
     }
 
+    // And then we draw the FBO containing the masked videos on top of the camera feed.
     windowFbo.draw(0, 0);
 
+    // Some debug stats & the GUI.
 	stringstream ss;
 	ss << "fps : " << ofGetFrameRate() << endl;
 	ss << "Tracked bodies: " << trackedBodyIds.size();
@@ -204,16 +215,6 @@ void ofApp::draw(){
 
 //--------------------------------------------------------------
 void ofApp::keyPressed(int key){
-    int index = key - '1';
-    if (index >= 0 && index < 5) {
-        if (players[index].isLoaded()) {
-            players[index].stop();
-            players[index].close();
-        }
-        else {
-            loadVideo(videos[index], players[index]);
-        }
-    }
 }
 
 //--------------------------------------------------------------

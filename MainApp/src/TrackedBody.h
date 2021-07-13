@@ -17,31 +17,19 @@ public:
 
 	void setIsTracked(bool isTracked);
 	void setNumberOfContourPoints(int contourPoints);
-	void setFramesDuration(int frames);
-
 
 	void updateContourData(vector<ofPolyline> contours);
-	void updateDelayedContours();
-
-	pair<ofPath*, ofRectangle> getContourSegment(int start, int amount);
-
-	void update();
-	void drawContours();
-	void drawContourForRaster(ofColor color);
-	void drawWithShader(ofShader* shader);
-	void draw();
+	void draw(ofColor color);
 
 	ICoordinateMapper* coordinateMapper;
 	ofPolyline rawContour;
 	ofPolyline contour;
 	ofPath* segment;
-	ofImage texture;
 
 	deque<ofPath> contoursAcrossFrames;
 
 	int index;
 
-	void setGeneralColor(ofColor color);
 	float smoothingFactor;
 	int contourPoints;
 	int framesDuration;
@@ -51,7 +39,6 @@ public:
 	ofColor generalColor;
 
 	ofPath contourPath;
-	vector<ofPolyline> delayedContours;
 
 	ofFbo mainFbo, polyFbo;
 

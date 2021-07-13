@@ -36,17 +36,7 @@ void TrackedBody::setNumberOfContourPoints(int contourPoints)
 	if (contourPoints != this->contourPoints) {
 		this->contourPoints = contourPoints;
 		this->contour.clear();
-		this->delayedContours.clear();
 	}
-}
-
-void TrackedBody::setFramesDuration(int frames) {
-	this->framesDuration = frames;
-}
-
-void TrackedBody::setGeneralColor(ofColor color)
-{
-	this->generalColor = color;
 }
 
 void TrackedBody::updateContourData(vector<ofPolyline> contours)
@@ -70,9 +60,6 @@ void TrackedBody::updateContourData(vector<ofPolyline> contours)
 	// 3. Match with persistent contour
 	if (this->contour.size() == 0) {
 		this->contour = newContour;
-		for (int i = 0; i < this->noContours; i++) {
-			this->delayedContours.push_back(ofPolyline(newContour));
-		}
 	}
 	else {
 		// Select matchesToCheck closest points in the new line to the first point in the persistent line
@@ -123,67 +110,10 @@ void TrackedBody::updateContourData(vector<ofPolyline> contours)
 	}
 }
 
-void TrackedBody::updateDelayedContours() {
-	if (this->contour.size() == 0) return;
-	for (int ct = 0; ct < this->delayedContours.size(); ct++) {
-		float smoothing = ofMap(sqrt(ct), 0, sqrt(this->delayedContours.size()), 0.9, 0.999);
-		for (int i = 0; i < delayedContours[ct].size(); i++) {
-			int newIndex = (i + this->contourIndexOffset) % this->contour.size();
-			delayedContours[ct][i].x = (1 - smoothing) * this->contour[newIndex].x + smoothing * delayedContours[ct][i].x;
-			delayedContours[ct][i].y = (1 - smoothing) * this->contour[newIndex].y + smoothing * delayedContours[ct][i].y;
-		}
-	}
-}
-
-// ------ Update per frame ------
-
-void TrackedBody::update()
-{
-	if (!this->isTracked) return;
-}
-
-// ------ Drawing per frame ------
-
-void TrackedBody::drawContours()
-{
-	if (!this->isTracked) return;
-	if (this->contour.size() < 3) return;
-	ofPushStyle();
-	ofSetColor(this->generalColor);
-	this->contour.draw();
-	ofPopStyle();
-}
-
-void TrackedBody::drawContourForRaster(ofColor color) {
+void TrackedBody::draw(ofColor color) {
 	for (auto& contourPath : contoursAcrossFrames) {
 		contourPath.setFilled(true);
 		contourPath.setFillColor(color);
 		contourPath.draw(0, 0);
 	}
-}
-
-void TrackedBody::drawWithShader(ofShader* shader) {
-	if (!this->isTracked) return;
-	if (this->contour.size() < 3) return;
-
-	// MainFboManager::end();
-	this->polyFbo.begin();
-	ofClear(0, 0, 0, 255);
-	this->drawContourForRaster(ofColor(255, 128, 128));
-	this->polyFbo.end();
-	// MainFboManager::begin();
-
-	float time = ofGetSystemTimeMillis();
-	glm::vec4 color = glm::vec4(this->generalColor.r, this->generalColor.g, this->generalColor.b, this->generalColor.a) / 255.0;
-
-	shader->begin();
-	shader->setUniform1f("uTime", time);
-	shader->setUniform4f("color", color);
-	this->polyFbo.draw(0, 0);
-	shader->end();
-}
-
-void TrackedBody::draw()
-{
-	this->updateDelayedContours();
 }
