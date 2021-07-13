@@ -6,7 +6,8 @@ MainApp/bin/*.dll
 MainApp/.vs
 MainApp/*.sln
 MainApp/*.vcxproj
-MainApp/bin/data/video
+MainApp/bin/data/video/*.mp4
+MainApp/bin/data/video/*.mov
 MainApp/MainApp.vcxproj.user
 
 # build files
