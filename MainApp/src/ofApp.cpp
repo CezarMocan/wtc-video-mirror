@@ -162,7 +162,10 @@ void ofApp::draw(){
     // or draw all bodies on the same FBO, but with different colors
     // and let the shader figure out which color masks which video.
     videoMaskFbo.begin();
-    ofClear(0, 0, 0, 0);
+    //ofClear(0, 0, 0, 0);
+    ofSetColor(0, 0, 0, 5);
+    ofFill();
+    ofDrawRectangle(0, 0, COLOR_WIDTH, COLOR_HEIGHT); 
     ofSetColor(255);
 
     for (int i = 0; i < this->trackedBodyIds.size(); i++) {
@@ -177,6 +180,7 @@ void ofApp::draw(){
         // We draw the masked video onto another FBO
         windowFbo.begin();
         ofSetColor(0, 0, 0, 5);
+        ofDrawRectangle(0, 0, COLOR_WIDTH, COLOR_HEIGHT);
         ofFill();
 
         // The shader takes a mask texture (where we drew the body in white, over a black background)
