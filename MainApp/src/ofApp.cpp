@@ -207,7 +207,6 @@ void ofApp::draw(){
 	stringstream ss;
 	ss << "fps : " << ofGetFrameRate() << endl;
 	ss << "Tracked bodies: " << trackedBodyIds.size();
-	if (!bHaveAllStreams) ss << endl << "Not all streams detected!";
 	ofDrawBitmapStringHighlight(ss.str(), gui.getPosition().x + gui.getWidth() + 10, 20);
 
     gui.draw();
